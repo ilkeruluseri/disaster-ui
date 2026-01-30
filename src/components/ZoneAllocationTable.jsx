@@ -1,11 +1,11 @@
-function ZoneAllocationTable({ assignedResources }) {
+export default function ZoneAllocationTable({ assignedResources }) {
   return (
-    <table className="w-full text-sm mt-3 border">
+    <table className="w-full text-xs border rounded">
       <thead className="bg-gray-100">
         <tr>
-          <th className="p-2 text-left">Hospital</th>
-          <th className="p-2 text-left">Resource</th>
-          <th className="p-2 text-right">Units</th>
+          <th className="p-1 text-left">Hospital</th>
+          <th className="p-1 text-left">Resource</th>
+          <th className="p-1 text-right">Units</th>
         </tr>
       </thead>
       <tbody>
@@ -13,9 +13,11 @@ function ZoneAllocationTable({ assignedResources }) {
           Object.entries(entry.resource_breakdown).map(
             ([resourceType, count]) => (
               <tr key={`${idx}-${resourceType}`} className="border-t">
-                <td className="p-2">{entry.hospital}</td>
-                <td className="p-2">{resourceType.replace("_", " ")}</td>
-                <td className="p-2 text-right">{count}</td>
+                <td className="p-1">{entry.hospital}</td>
+                <td className="p-1">
+                  {resourceType.replace("_", " ")}
+                </td>
+                <td className="p-1 text-right">{count}</td>
               </tr>
             )
           )
@@ -24,4 +26,3 @@ function ZoneAllocationTable({ assignedResources }) {
     </table>
   );
 }
-export default ZoneAllocationTable;

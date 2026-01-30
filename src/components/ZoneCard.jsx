@@ -1,44 +1,64 @@
-import ResourceList from "./ResourceList";
 import ZoneAllocationTable from "./ZoneAllocationTable";
 
-const priorityStyles = {
-  HIGH: "border-red-400 bg-red-50",
-  MEDIUM: "border-yellow-400 bg-yellow-50",
-  LOW: "border-green-400 bg-green-50",
-};
+function priorityColor(priority) {
+  switch (priority) {
+    case "HIGH":
+      return "border-red-500 bg-red-50";
+    case "MEDIUM":
+      return "border-yellow-500 bg-yellow-50";
+    case "LOW":
+      return "border-green-500 bg-green-50";
+    default:
+      return "border-gray-300 bg-white";
+  }
+}
 
 export default function ZoneCard({ zone }) {
   return (
     <div
-      className={`border rounded p-4 ${priorityStyles[zone.priority]}`}
+      className={`rounded-lg border-l-4 p-4 shadow-sm ${priorityColor(
+        zone.priority
+      )}`}
     >
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="font-semibold">
-          Zone {zone.zone_id}
-        </h3>
-        <span className="font-bold">{zone.priority}</span>
-      </div>
-
-      <div>
-        <strong className="text-sm">Resources allocated:</strong>
-        <ResourceList summary={zone.resource_summary} />
-      </div>
-
-      <ZoneAllocationTable
-        assignedResources={zone.assigned_resources}
-      />
-
-      <div className="text-sm mb-2">
-        Confidence:{" "}
-        <strong>{Math.round(zone.confidence * 100)}%</strong>
-      </div>
-
-      {zone.unserved > 0 && (
-        <div className="text-sm text-red-600 mb-2">
-          ⚠️ Unserved demand: {zone.unserved}
+      {/* Header */}
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className="text-lg font-semibold">
+            Zone {zone.zone_id}
+          </h3>
+          <p className="text-sm text-gray-600">
+            Priority: <strong>{zone.priority}</strong>
+          </p>
         </div>
-      )}
 
+        <div className="text-right">
+          <div className="text-sm text-gray-500">Confidence</div>
+          <div className="text-lg font-semibold">
+            {(zone.confidence * 100).toFixed(0)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+        <div>
+          <span className="text-gray-500">Unserved:</span>{" "}
+          <strong>{zone.unserved}</strong>
+        </div>
+        <div>
+          <span className="text-gray-500">Resources:</span>{" "}
+          {Object.entries(zone.resource_summary).map(
+            ([type, count]) => (
+              <span key={type} className="mr-2">
+                {type.replace("_", " ")} ({count})
+              </span>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Allocation Table */}
+      <ZoneAllocationTable assignedResources={zone.assigned_resources} />
     </div>
   );
 }
