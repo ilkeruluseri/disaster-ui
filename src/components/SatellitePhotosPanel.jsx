@@ -1,41 +1,92 @@
 import { useEffect, useState } from "react";
+import { predictImage } from "../services/api";
 
-const ZONES = [
+/**
+ * Mock originals (top row only)
+ * In a real flow these would come from satellite fetch
+ */
+const ORIGINAL_IMAGES = [
   {
-    id: "Z1",
-    original: "src/photos/eq-img1.jpeg",
-    analyzed: "src/photos/eq-img1-analyzed.jpeg",
+    zone: "Z1",
+    src: "src/photos/eq-img1.jpeg",
   },
   {
-    id: "Z2",
-    original: "src/photos/eq-img2.jpeg",
-    analyzed: "src/photos/eq-img2-analyzed.jpeg",
+    zone: "Z2",
+    src: "src/photos/eq-img2.jpeg",
   },
   {
-    id: "Z3",
-    original: "src/photos/eq-img3.jpeg",
-    analyzed: "src/photos/eq-img3-analyzed.jpeg",
+    zone: "Z3",
+    src: "src/photos/eq-img3.jpeg",
   },
 ];
 
-export default function SatellitePhotosPanel({ onClose }) {
-  const [loading, setLoading] = useState(true);
+export default function SatellitePhotosPanel({ onClose, disasterType = "earthquake" }) {
+  const [items, setItems] = useState([]);
   const [dots, setDots] = useState("");
 
+  /* animated dots */
   useEffect(() => {
-    const dotTimer = setInterval(() => {
-      setDots((d) => (d.length >= 3 ? "" : d + "."));
+    const t = setInterval(() => {
+      setDots(d => (d.length >= 3 ? "" : d + "."));
     }, 400);
-
-    const loadTimer = setTimeout(() => {
-      setLoading(false);
-    }, 2500);
-
-    return () => {
-      clearInterval(dotTimer);
-      clearTimeout(loadTimer);
-    };
+    return () => clearInterval(t);
   }, []);
+
+  /* kick off predictions */
+  useEffect(() => {
+    async function runPredictions() {
+      const initialized = await Promise.all(
+        ORIGINAL_IMAGES.map(async (img) => {
+          // fetch image as File so we can upload it
+          const res = await fetch(img.src);
+          const blob = await res.blob();
+          const file = new File([blob], img.src.split("/").pop(), {
+            type: blob.type,
+          });
+
+          return {
+            zone: img.zone,
+            originalSrc: img.src,
+            file,
+            loading: true,
+            result: null,
+          };
+        })
+      );
+
+      setItems(initialized);
+
+      // run predictions sequentially (simpler + clearer demo)
+      for (let i = 0; i < initialized.length; i++) {
+        try {
+          const prediction = await predictImage({
+            file: initialized[i].file,
+            disasterType,
+            save: true,
+          });
+          console.log("Prediction result:", prediction);
+
+          setItems(prev =>
+            prev.map((it, idx) =>
+              idx === i
+                ? { ...it, loading: false, result: prediction }
+                : it
+            )
+          );
+        } catch (err) {
+          setItems(prev =>
+            prev.map((it, idx) =>
+              idx === i
+                ? { ...it, loading: false, result: { error: err.message } }
+                : it
+            )
+          );
+        }
+      }
+    }
+
+    runPredictions();
+  }, [disasterType]);
 
   return (
     <div className="relative mt-4 border rounded-lg bg-gray-50 p-4">
@@ -46,49 +97,63 @@ export default function SatellitePhotosPanel({ onClose }) {
         ✕
       </button>
 
-      <h3 className="font-semibold mb-4">🛰 Satellite Imagery Analysis</h3>
+      <h3 className="font-semibold mb-4">
+        🛰 Satellite Imagery Analysis
+      </h3>
 
-      {loading ? (
-        <div className="text-gray-600">
-          Processing satellite images{dots}
+      <div className="overflow-x-auto">
+        <div className="grid grid-cols-3 gap-4 min-w-[720px]">
+
+          {/* TOP ROW — ORIGINALS */}
+          {items.map((item, idx) => (
+            <div key={`orig-${idx}`} className="bg-white border rounded shadow-sm">
+                <div className="text-sm font-medium text-center py-1">
+                    Zone {item.zone} — Original
+                    </div>
+
+                    <div className="aspect-square w-full">
+                        <img
+                        src={item.originalSrc}
+                        className="w-full h-full object-cover"
+                        />
+                    </div>
+                </div>
+
+          ))}
+
+          {/* BOTTOM ROW — ANALYZED */}
+          {items.map((item, idx) => (
+            <div key={`ana-${idx}`} className="bg-white border rounded shadow-sm">
+                <div className="text-sm font-medium text-center py-1">
+                    Zone {item.zone} — Analysis
+                </div>
+
+                <div className="aspect-square w-full flex items-center justify-center">
+                    {item.loading && (
+                    <div className="text-gray-600 text-sm">
+                        Analyzing{dots}
+                    </div>
+                    )}
+
+                    {!item.loading && item.result?.overlay_url && (
+                    <img
+                        src={`http://127.0.0.1:8000${item.result.overlay_url}`}
+                        className="w-full h-full object-cover"
+                    />
+                    )}
+
+                    {!item.loading && !item.result?.overlay_url && (
+                    <div className="text-sm text-gray-500">
+                        No damage detected
+                    </div>
+                    )}
+                </div>
+            </div>
+
+          ))}
+
         </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <div className="grid grid-cols-3 gap-4 min-w-[700px]">
-            {ZONES.map((zone) => (
-              <div key={zone.id} className="space-y-3">
-                <div className="text-center font-medium">
-                  Zone {zone.id}
-                </div>
-
-                {/* Original */}
-                <div className="border rounded overflow-hidden bg-white shadow-sm">
-                  <img
-                    src={zone.original}
-                    alt={`Zone ${zone.id} original`}
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="text-xs p-2 text-gray-600 text-center">
-                    Original
-                  </div>
-                </div>
-
-                {/* Analyzed */}
-                <div className="border rounded overflow-hidden bg-white shadow-sm">
-                  <img
-                    src={zone.analyzed}
-                    alt={`Zone ${zone.id} analyzed`}
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="text-xs p-2 text-gray-600 text-center">
-                    Damage detected
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

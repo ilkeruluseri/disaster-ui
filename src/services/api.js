@@ -44,3 +44,22 @@ export async function runOptimization({
 
   return response.json();
 }
+
+export async function predictImage({ file, disasterType, save = true }) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("disaster_type", disasterType);
+  formData.append("save", String(save));
+
+  const res = await fetch(`${API_BASE}/predict`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Prediction failed");
+  }
+
+  return res.json();
+}
