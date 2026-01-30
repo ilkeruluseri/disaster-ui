@@ -51,7 +51,7 @@ export async function predictImage({ file, disasterType, save = true }) {
   formData.append("disaster_type", disasterType);
   formData.append("save", String(save));
 
-  const res = await fetch(`${API_BASE}/predict`, {
+  const res = await fetch(`${API_BASE_URL}/predict`, {
     method: "POST",
     body: formData,
   });
