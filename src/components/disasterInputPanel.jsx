@@ -2,7 +2,6 @@ import { useState } from "react";
 import MapPicker from "./MapPicker";
 
 export default function DisasterInputPanel({
-  onRun,
   loading,
   onShowPhotos,
 }) {
@@ -11,11 +10,6 @@ export default function DisasterInputPanel({
   const [disasterType, setDisasterType] = useState("earthquake");
 
   const handleRun = () => {
-    onRun({
-      coordinates: location,
-      radius,
-      disasterType,
-    });
     onShowPhotos();
   };
 

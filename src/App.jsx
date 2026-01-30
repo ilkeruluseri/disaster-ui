@@ -108,13 +108,12 @@ export default function App() {
         </h1>
 
         <DisasterInputPanel
-          onRun={runAllocation}
           loading={loading}
           onShowPhotos={() => setShowPhotos(true)}
         />
 
         {showPhotos && (
-          <SatellitePhotosPanel onClose={() => setShowPhotos(false)} />
+          <SatellitePhotosPanel onClose={() => setShowPhotos(false)} onComplete={runAllocation}/>
         )}
 
         {loading && (

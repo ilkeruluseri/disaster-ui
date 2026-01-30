@@ -20,7 +20,7 @@ const ORIGINAL_IMAGES = [
   },
 ];
 
-export default function SatellitePhotosPanel({ onClose, disasterType = "earthquake" }) {
+export default function SatellitePhotosPanel({ onClose, disasterType = "earthquake", onComplete }) {
   const [items, setItems] = useState([]);
   const [dots, setDots] = useState("");
 
@@ -82,6 +82,10 @@ export default function SatellitePhotosPanel({ onClose, disasterType = "earthqua
             )
           );
         }
+      }
+      console.log("All predictions complete, triggering onComplete", onComplete, items);
+      if (onComplete && items) {
+        setTimeout(() => onComplete(), 1000);
       }
     }
 
