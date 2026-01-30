@@ -1,69 +1,102 @@
 import { useState } from "react";
+import { runOptimization } from "./services/api";
 
-const damageColors = {
-  High: "bg-red-100 border-red-400",
-  Medium: "bg-yellow-100 border-yellow-400",
-  Low: "bg-green-100 border-green-400",
-};
+import DisasterInputPanel from "./components/disasterInputPanel";
+import AgentStatus from "./components/AgentStatus";
+import ZoneResultsList from "./components/ZoneResultsList";
+import HospitalResourcesPanel from "./components/HospitalResourcesPanel";
 
-function App() {
+export default function App() {
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(null);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
-  const reportDisaster = () => {
+  const runAllocation = async () => {
     setLoading(true);
-    setResults(null);
+    setError(null);
+    setData(null);
 
-    // Simulate backend call
-    setTimeout(() => {
-      setResults([
-        { level: "High", area: "City Center", priority: 1 },
-        { level: "Medium", area: "Industrial Zone", priority: 2 },
-        { level: "Low", area: "Suburbs", priority: 3 },
-      ]);
+    try {
+      const result = await runOptimization({
+        disasterType: "earthquake",
+        coordinates: [38.42, 27.13],
+
+        zones: [
+          {
+            zone_id: "Z1",
+            damage_severity: 0.95,
+            population_density: 0.85,
+            medical_demand: 25,
+            lat: 38.42,
+            lon: 27.13,
+            terrain_type: "coastal",
+          },
+          {
+            zone_id: "Z2",
+            damage_severity: 0.7,
+            population_density: 0.9,
+            medical_demand: 18,
+            lat: 38.44,
+            lon: 27.18,
+            terrain_type: "urban",
+          },
+          {
+            zone_id: "Z3",
+            damage_severity: 0.8,
+            population_density: 0.4,
+            medical_demand: 12,
+            lat: 38.50,
+            lon: 27.25,
+            terrain_type: "mountain",
+          },
+        ],
+
+        events: [],
+
+        useAgent: true,
+      });
+
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
         <h1 className="text-2xl font-bold mb-4">
-          Disaster Damage Assessment
+          Disaster Resource Allocation
         </h1>
 
-        <button
-          onClick={reportDisaster}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          disabled={loading}
-        >
-          {loading ? "Analyzing..." : "Report Disaster"}
-        </button>
+        <DisasterInputPanel onRun={runAllocation} loading={loading} />
 
         {loading && (
-          <p className="mt-4 text-gray-600">
-            Analyzing satellite data…
+          <p className="text-gray-600 mb-4">
+            Analyzing situation…
           </p>
         )}
 
-        {results && (
-          <div className="mt-6 space-y-3">
-            {results.map((item, index) => (
-              <div
-                key={index}
-                className={`border rounded p-4 flex justify-between ${damageColors[item.level]}`}
-              >
-                <span>
-                  <strong>{item.area}</strong> — {item.level} damage
-                </span>
-                <span>Priority {item.priority}</span>
-              </div>
-            ))}
+        {error && (
+          <div className="mb-4 text-red-600">
+            ❌ {error}
           </div>
+        )}
+
+        {data && (
+          <>
+            <AgentStatus
+              reasoning={data.agent_reasoning}
+              events={data.events_applied}
+              fallback={data.fallback_used}
+            />
+            <ZoneResultsList results={data.results} />
+            <HospitalResourcesPanel results={data.results} />
+          </>
         )}
       </div>
     </div>
   );
 }
-
-export default App;
