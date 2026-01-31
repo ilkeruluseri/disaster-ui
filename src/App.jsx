@@ -1,12 +1,22 @@
-import { useState } from "react";
-import { runOptimization } from "./services/api";
+import { useState, useRef } from "react";
+import { runOptimization, runNextRound } from "./services/api";
 
 import DisasterInputPanel from "./components/disasterInputPanel";
 import AgentStatus from "./components/AgentStatus";
 import ZoneResultsList from "./components/ZoneResultsList";
 import HospitalResourcesPanel from "./components/HospitalResourcesPanel";
 import SatellitePhotosPanel from "./components/SatellitePhotosPanel";
-import FloodRiskPanel from "./components/FloodRiskPanel";
+import EventBuilder from "./components/EventBuilder";
+
+
+/**
+ * @typedef {Object} Round
+ * @property {number} roundNumber
+ * @property {Array} dispatches
+ * @property {number} remainingDemand
+ * @property {string} reasoning
+ */
+
 
 function Tabs({ tabs, activeTab, onChange }) {
   const tabClass = (tab) =>
@@ -93,6 +103,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("zones");
 
   const [showPhotos, setShowPhotos] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [simulation, setSimulation] = useState({ rounds: [] });
+  const allocRanRef = useRef(false);
+
+
 
   const topTabs = [
     { value: "assessment", label: "Agent Assessment" },
@@ -101,55 +116,90 @@ export default function App() {
 
   const bottomTabs = [
     { value: "zones", label: "Zones" },
-    { value: "hospitals", label: "Hospitals" },
+    { value: "hospitals", label: "Resources" },
   ];
 
   const runAllocation = async () => {
+    if (allocRanRef.current) return;
+    allocRanRef.current = true;
+
     setLoading(true);
     setError(null);
     setData(null);
 
     try {
-      const result = await runOptimization({
+      const optimizationInput = {
         disasterType: "earthquake",
-        coordinates: [38.42, 27.13],
+        coordinates: undefined, // or null, if your backend allows it
+        useAgent: true,
         zones: [
           {
             zone_id: "Z1",
-            damage_severity: 0.95,
-            population_density: 0.85,
-            medical_demand: 25,
-            lat: 38.42,
-            lon: 27.13,
-            terrain_type: "coastal",
+            damage_severity: 0.9,
+            population_density: 0.04,
+            demand: 80,
+            lat: 39.87,
+            lon: 30.16,
           },
           {
             zone_id: "Z2",
-            damage_severity: 0.7,
-            population_density: 0.9,
-            medical_demand: 18,
-            lat: 38.44,
-            lon: 27.18,
-            terrain_type: "urban",
-          },
-          {
-            zone_id: "Z3",
             damage_severity: 0.8,
-            population_density: 0.4,
-            medical_demand: 12,
-            lat: 38.5,
-            lon: 27.25,
-            terrain_type: "mountain",
+            population_density: 0.9,
+            demand: 200,
+            lat: 40.0,
+            lon: 30.0,
           },
         ],
-        events: [],
-        useAgent: true,
-      });
+        events: [
+          {
+            event_type: "road_collapse",
+            params: {
+              hospital_id: "H1",
+              zone_id: "Z2",
+            },
+          },
+        ],
+      };
+      const result = await runOptimization(optimizationInput);
 
+      const round1 = {
+        roundNumber: result.round_number,
+        dispatches: result.dispatches,
+        remainingDemand: result.remaining_demand,
+        reasoning: result.round_reasoning,
+        roundAllocation: result.initial_allocation, // ONLY round 1 has this
+      };
+
+      setSimulation({ rounds: [round1] });
+      setCurrentStep(1);
       setData(result);
       setActiveTab("zones");
       setTopTab("assessment");
       setMode("allocation"); // after run, stay in allocation view
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNextRound = async (events = []) => {
+    console.log("Running next round with events:", events);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await runNextRound(events);
+      const round = {
+        roundNumber: result.round_number,
+        dispatches: result.dispatches,
+        remainingDemand: result.remaining_demand,
+        reasoning: result.round_reasoning,
+        roundAllocation: result.round_allocation,
+      };
+      setSimulation(s => ({ rounds: [...s.rounds, round] }));
+      setCurrentStep(s => s + 1);
+      setData(result);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -167,6 +217,14 @@ export default function App() {
 
 
         </div>
+        <DisasterInputPanel
+          loading={loading}
+          onShowPhotos={() => setShowPhotos(true)}
+        />
+
+        {showPhotos && (
+          <SatellitePhotosPanel onClose={() => setShowPhotos(false)} onComplete={runAllocation}/>
+        )}
 
         {/* =========================
             ✅ FLOOD MODE
@@ -223,9 +281,62 @@ export default function App() {
                 )}
               </>
             )}
+
+            {/* GRAPH VIEW */}
+            {topTab === "graph" && (
+              <div className="h-[500px] border rounded bg-gray-50 flex items-center justify-center text-gray-500">
+                Graph will go here
+              </div>
+            )}
+
+            <p className="text-sm text-gray-500">
+              Step {currentStep}
+            </p>
+
+            <div className="flex gap-2 mt-4">
+
+              <EventBuilder onSubmit={handleNextRound} />
+
+            </div>
+
+            {/* BOTTOM TABS */}
+              <Tabs
+                tabs={bottomTabs}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+              />
+
+              {activeTab === "zones" && !loading && (
+                <ZoneResultsList results={simulation.rounds[currentStep - 1].roundAllocation} />
+              )}
+
+              {activeTab === "hospitals" && !loading && (
+                <HospitalResourcesPanel results={simulation.rounds[currentStep - 1].roundAllocation} />
+              )}
+
+              {loading && <LoadingOverlay />}
+              
           </>
         )}
       </div>
+    </div>
+  );
+
+}
+
+function LoadingOverlay() {
+  return (
+    <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+      <div className="relative">
+        {/* Large Spinner */}
+        <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+        {/* Inner Pulse for extra "pizzazz" */}
+        <div className="absolute inset-4 bg-blue-600 rounded-full animate-pulse opacity-20"></div>
+      </div>
+      <h2 className="mt-6 text-xl font-semibold text-gray-800 animate-pulse">
+        Optimizing Next Round...
+      </h2>
+      <p className="text-gray-500 mt-2">Recalculating resource distribution</p>
     </div>
   );
 }
