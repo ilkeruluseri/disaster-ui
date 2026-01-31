@@ -41,13 +41,67 @@ function Tabs({ tabs, activeTab, onChange }) {
   );
 }
 
+/** ✅ Top switcher: looks like title tabs */
+function TopTitleTabs({ active, onChange }) {
+  const tabClass = (key) =>
+    `relative pb-5 text-lg font-bold transition cursor-pointer ${
+      active === key
+        ? "text-gray-900"
+        : "text-gray-500 hover:text-gray-800"
+    }`;
+
+  const underlineClass = (key) =>
+    `absolute left-0 -bottom-[1px] h-[3px] w-full rounded transition ${
+      active === key ? "bg-blue-600" : "bg-transparent"
+    }`;
+
+  return (
+    <div className="w-full">
+      {/* Tabs */}
+      <div className="flex items-end gap-10 border-b">
+        <button
+          className={tabClass("allocation")}
+          onClick={() => onChange("allocation")}
+        >
+          Disaster Resource Allocation
+          <span className={underlineClass("allocation")} />
+        </button>
+
+        <button
+          className={tabClass("flood")}
+          onClick={() => onChange("flood")}
+        >
+          Flood Risk Analysis
+          <span className={underlineClass("flood")} />
+        </button>
+
+        <div className="flex-1" />
+      </div>
+
+      {/* Subline */}
+      <div className="mt-3 text-sm text-gray-500">
+        {active === "allocation"
+          ? "Optimize resource allocation across zones and hospitals."
+          : "Analyze province-level flood risk using forecast data."}
+      </div>
+    </div>
+  );
+}
+
+
 
 export default function App() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+
+  // ✅ Which top section is visible
+  const [mode, setMode] = useState("allocation"); // "allocation" | "flood"
+
+  // Allocation inner tabs
   const [topTab, setTopTab] = useState("assessment");
   const [activeTab, setActiveTab] = useState("zones");
+
   const [showPhotos, setShowPhotos] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [simulation, setSimulation] = useState({ rounds: [] });
@@ -57,7 +111,7 @@ export default function App() {
 
   const topTabs = [
     { value: "assessment", label: "Agent Assessment" },
-    { value: "graph", label: "Graph" },
+    // (optional) keep this if you want: { value: "other", label: "..." }
   ];
 
   const bottomTabs = [
@@ -119,7 +173,9 @@ export default function App() {
       setSimulation({ rounds: [round1] });
       setCurrentStep(1);
       setData(result);
-      setActiveTab("zones"); // reset to default view
+      setActiveTab("zones");
+      setTopTab("assessment");
+      setMode("allocation"); // after run, stay in allocation view
     } catch (err) {
       setError(err.message);
     } finally {
@@ -154,10 +210,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="w-11/12 max-w-7xl mx-auto bg-white rounded-xl shadow p-6">
-        <h1 className="text-2xl font-bold mb-4">
-          Disaster Resource Allocation
-        </h1>
+        {/* ✅ TOP selectable titles */}
+        {/* TOP HEADER TABS */}
+<div className="mb-6">
+  <TopTitleTabs active={mode} onChange={setMode} />
 
+
+        </div>
         <DisasterInputPanel
           loading={loading}
           onShowPhotos={() => setShowPhotos(true)}
@@ -167,34 +226,60 @@ export default function App() {
           <SatellitePhotosPanel onClose={() => setShowPhotos(false)} onComplete={runAllocation}/>
         )}
 
-        {loading && (
-          <p className="text-gray-600 mb-4">
-            Analyzing situation…
-          </p>
-        )}
-
-        {error && (
-          <div className="mb-4 text-red-600">
-            ❌ {error}
+        {/* =========================
+            ✅ FLOOD MODE
+           ========================= */}
+        {mode === "flood" && (
+          <div>
+            <FloodRiskPanel />
           </div>
         )}
 
-        {data && (
+        {/* =========================
+            ✅ ALLOCATION MODE
+           ========================= */}
+        {mode === "allocation" && (
           <>
-            {/* TOP TABS */}
-            <Tabs
-              tabs={topTabs}
-              activeTab={topTab}
-              onChange={setTopTab}
+            <DisasterInputPanel
+              onRun={runAllocation}
+              loading={loading}
+              onShowPhotos={() => setShowPhotos(true)}
             />
 
-            {/* AGENT ASSESSMENT VIEW */}
-            {topTab === "assessment" && (
-                <AgentStatus
-                  reasoning={data.round_reasoning}
-                  events={data.events_applied}
-                  fallback={data.fallback_used}
+            {showPhotos && (
+              <SatellitePhotosPanel onClose={() => setShowPhotos(false)} />
+            )}
+
+            {loading && <p className="text-gray-600 mb-4">Analyzing situation…</p>}
+
+            {error && <div className="mb-4 text-red-600">❌ {error}</div>}
+
+            {data && (
+              <>
+                {/* TOP TABS inside allocation */}
+                <Tabs tabs={topTabs} activeTab={topTab} onChange={setTopTab} />
+
+                {topTab === "assessment" && (
+                  <AgentStatus
+                    reasoning={data.agent_reasoning}
+                    events={data.events_applied}
+                    fallback={data.fallback_used}
+                  />
+                )}
+
+                {/* Bottom tabs */}
+                <Tabs
+                  tabs={bottomTabs}
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
                 />
+
+                {activeTab === "zones" && <ZoneResultsList results={data.results} />}
+
+                {activeTab === "hospitals" && (
+                  <HospitalResourcesPanel results={data.results} />
+                )}
+              </>
             )}
 
             {/* GRAPH VIEW */}
@@ -233,7 +318,6 @@ export default function App() {
               
           </>
         )}
-
       </div>
     </div>
   );
