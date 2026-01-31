@@ -45,6 +45,30 @@ export async function runOptimization({
   return response.json();
 }
 
+export async function runNextRound(events = []) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/crisis/next-round`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ events }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "Next round request failed");
+    }
+
+    const data = await response.json();
+    return data; 
+
+  } catch (err) {
+    console.error("runNextRound error:", err);
+    throw err;
+  }
+}
+
 export async function predictImage({ file, disasterType, save = true }) {
   const formData = new FormData();
   formData.append("file", file);

@@ -3,8 +3,8 @@ export default function ZoneAllocationTable({ assignedResources }) {
     <table className="w-full text-xs border rounded">
       <thead className="bg-gray-100">
         <tr>
-          <th className="p-1 text-left">Hospital</th>
           <th className="p-1 text-left">Resource</th>
+          <th className="p-1 text-left">Type</th>
           <th className="p-1 text-right">Units</th>
         </tr>
       </thead>

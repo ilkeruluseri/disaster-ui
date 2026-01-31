@@ -18,6 +18,10 @@ const ORIGINAL_IMAGES = [
     zone: "Z3",
     src: "src/photos/eq-img3.jpeg",
   },
+  {
+    zone: "Z4",
+    src: "src/photos/eq-img4.jpeg",
+  },
 ];
 
 export default function SatellitePhotosPanel({ onClose, disasterType = "earthquake", onComplete }) {
@@ -106,58 +110,55 @@ export default function SatellitePhotosPanel({ onClose, disasterType = "earthqua
       </h3>
 
       <div className="overflow-x-auto">
-        <div className="grid grid-cols-3 gap-4 min-w-[720px]">
+  <div className="grid grid-rows-2 grid-flow-col auto-cols-[240px] gap-4">
 
-          {/* TOP ROW — ORIGINALS */}
-          {items.map((item, idx) => (
-            <div key={`orig-${idx}`} className="bg-white border rounded shadow-sm">
-                <div className="text-sm font-medium text-center py-1">
-                    Zone {item.zone} — Original
-                    </div>
+    {items.map((item, idx) => (
+      <div key={idx} className="contents">
+        {/* TOP: Original */}
+        <div className="bg-white border rounded shadow-sm">
+          <div className="text-sm font-medium text-center py-1">
+            Zone {item.zone} — Original
+          </div>
+          <div className="aspect-square w-full">
+            <img
+              src={item.originalSrc}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
 
-                    <div className="aspect-square w-full">
-                        <img
-                        src={item.originalSrc}
-                        className="w-full h-full object-cover"
-                        />
-                    </div>
-                </div>
+        {/* BOTTOM: Analysis */}
+        <div className="bg-white border rounded shadow-sm">
+          <div className="text-sm font-medium text-center py-1">
+            Zone {item.zone} — Analysis
+          </div>
+          <div className="aspect-square w-full flex items-center justify-center">
+            {item.loading && (
+              <div className="text-gray-600 text-sm">
+                Analyzing{dots}
+              </div>
+            )}
 
-          ))}
+            {!item.loading && item.result?.overlay_url && (
+              <img
+                src={`http://127.0.0.1:8000${item.result.overlay_url}`}
+                className="w-full h-full object-cover"
+              />
+            )}
 
-          {/* BOTTOM ROW — ANALYZED */}
-          {items.map((item, idx) => (
-            <div key={`ana-${idx}`} className="bg-white border rounded shadow-sm">
-                <div className="text-sm font-medium text-center py-1">
-                    Zone {item.zone} — Analysis
-                </div>
-
-                <div className="aspect-square w-full flex items-center justify-center">
-                    {item.loading && (
-                    <div className="text-gray-600 text-sm">
-                        Analyzing{dots}
-                    </div>
-                    )}
-
-                    {!item.loading && item.result?.overlay_url && (
-                    <img
-                        src={`http://127.0.0.1:8000${item.result.overlay_url}`}
-                        className="w-full h-full object-cover"
-                    />
-                    )}
-
-                    {!item.loading && !item.result?.overlay_url && (
-                    <div className="text-sm text-gray-500">
-                        No damage detected
-                    </div>
-                    )}
-                </div>
-            </div>
-
-          ))}
-
+            {!item.loading && !item.result?.overlay_url && (
+              <div className="text-sm text-gray-500">
+                No damage detected
+              </div>
+            )}
+          </div>
         </div>
       </div>
+    ))}
+
+  </div>
+</div>
+
     </div>
   );
 }

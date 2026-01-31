@@ -25,7 +25,7 @@ export default function HospitalResourcesPanel({ results }) {
   return (
     <div>
       <h2 className="text-lg font-semibold mb-4">
-        Hospital Dispatch Plan
+        Resource Dispatch Plan
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

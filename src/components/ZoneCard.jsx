@@ -32,9 +32,9 @@ export default function ZoneCard({ zone }) {
         </div>
 
         <div className="text-right">
-          <div className="text-sm text-gray-500">Confidence</div>
+          <div className="text-sm text-gray-500">Planned Coverage</div>
           <div className="text-lg font-semibold">
-            {(zone.confidence * 100).toFixed(0)}%
+            {(zone.planned_coverage * 100).toFixed(0)}%
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@ export default function ZoneCard({ zone }) {
       <div className="grid grid-cols-2 gap-2 text-sm mb-3">
         <div>
           <span className="text-gray-500">Unserved:</span>{" "}
-          <strong>{zone.unserved}</strong>
+          <strong>{zone.allocation_gap}</strong>
         </div>
         <div>
           <span className="text-gray-500">Resources:</span>{" "}
