@@ -63,3 +63,16 @@ export async function predictImage({ file, disasterType, save = true }) {
 
   return res.json();
 }
+export async function getFloodRisk() {
+  const res = await fetch(`${API_BASE_URL}/flood/risk`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Flood risk fetch failed (${res.status}): ${text}`);
+  }
+
+  return res.json();
+}
